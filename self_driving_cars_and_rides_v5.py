@@ -11,6 +11,7 @@ import numpy as np
 import sympy
 from random import shuffle
 
+
 class Ride:
     start_r = 0
     start_c = 0
@@ -20,7 +21,6 @@ class Ride:
     latest_finish = 0
     assigned = False
     index = -1
-    score = 0
 
     def distance(self):
         return abs(self.start_r - self.end_r) + abs(self.start_c - self.end_c)
@@ -30,15 +30,33 @@ class Car:
     next_r = 0
     next_c = 0
     free_by_step = 0
-    assigned_rides = ""
-    score = 0
+
+    def __init__(self):
+        self.assigned_rides = []
+
+    def assign_ride(self, ride):
+        self.assigned_rides.append(ride.index)
+        self.next_r = ride.end_r
+        self.next_c = ride.end_c
+        self.free_by_step = self.__compute_free_by(ride)
+
+    def __compute_free_by(self, ride):
+        current_to_start_distance = self.__distance_to(ride.start_r, ride.start_c)
+        wait_to_start_steps = ride.earliest_start - (self.free_by_step + current_to_start_distance)
+        if wait_to_start_steps < 0:
+            wait_to_start_steps = 0
+        travel_distance = ride.distance()
+
+        return current_to_start_distance + wait_to_start_steps + travel_distance
+
+    def __distance_to(self, r, c):
+        return abs(self.next_r - r) + abs(self.next_c - c)
 
 
 def read_input_self_driving_data(filename):
     """Reads the input of a Self driving car problem.
 
     returns:
-
     R – number of rows of the grid ( 1 ≤ R ≤ 1 0000)
     C – number of columns of the grid ( 1 ≤ C ≤ 1 0000)
     F – number of vehicles in the fleet ( 1 ≤ F ≤ 1 000)
@@ -58,7 +76,8 @@ def read_input_self_driving_data(filename):
     
     for i in range(1, N + 1):
         ride = Ride()
-        ride.start_r, ride.start_c, ride.end_r, ride.end_c, ride.earliest_start, ride.latest_finish = [int(val) for val in lines[i].split()]
+        ride.start_r, ride.start_c, ride.end_r, ride.end_c, ride.earliest_start, ride.latest_finish = \
+            [int(val) for val in lines[i].split()]
         ride.index = i - 1
         city.append(ride)
 
@@ -72,53 +91,19 @@ def build_cars(number_of_cars):
     
     return cars
 
-def distance(r_1, c_1, r_2, c_2):
-        return abs(r_1 - r_2) + abs(c_1 - c_2)
-
-def compute_free_by(car, ride, t):
-    travel_to_start_distance = distance(car.next_r, car.next_c, ride.start_r, ride.start_c)
-    wait_to_start = ride.earliest_start - (t + travel_to_start_distance)
-    if wait_to_start < 0:
-        wait_to_start = 0
-    travel_distance = ride.distance()
-
-    return travel_to_start_distance + wait_to_start + travel_distance
-
-
-def score(car, ride, t):
-    travel_to_start_distance = distance(car.next_r, car.next_c, ride.start_r, ride.start_c)
-
-    return ride.earliest_start - (travel_to_start_distance + t)
-
 
 def assign_rides_to_cars(filename):
     R, C, F, N, B, T, rides = read_input_self_driving_data(filename)
     cars = build_cars(F)
 
-    # print(len(cars))
-    # print(R, C, F, N, B, T, rides)
+    rides.sort(key = lambda ride: ride.latest_finish)
 
-    for t in range(T):
-        unassigned_rides = [x for x in rides if x.assigned == False]
-        for ride in unassigned_rides:
-            free_cars = [x for x in cars if x.free_by_step <= t]
-            
-            for car in free_cars:
-                car.score = score(car, ride, t)
-
-            if len(free_cars) == 0:
-                break
-
-            free_cars.sort(key=lambda car: car.score, reverse=True)
-            car = free_cars[0]
-
-            # car.assigned_rides.append(ride.index)
-            car.assigned_rides = car.assigned_rides + " " + str(ride.index)
-            car.next_r = ride.end_r
-            car.next_c = ride.end_c
-            car.free_by_step = compute_free_by(car, ride, t)
-
-            ride.assigned = True
+    car_index = 0
+    for ride in rides:
+        cars[car_index].assign_ride(ride)
+        car_index = car_index + 1
+        if car_index == len(cars):
+            car_index = 0 
     
     return cars
 
@@ -127,8 +112,9 @@ def write_output_assignements(filename, cars):
     """Writes an output file with the required format."""
     with open(filename, 'w') as f:
         for i in range(len(cars)):
-            assigned_rides = "".join(map(str, cars[i].assigned_rides))
-            f.write(str(len(assigned_rides.split())) + assigned_rides + "\n")
+            assigned_rides = cars[i].assigned_rides
+            assigned_rides_indexes = " ".join(map(str, assigned_rides))
+            f.write(str(len(assigned_rides)) + " " + assigned_rides_indexes + "\n")
 
 
 cars = assign_rides_to_cars('files/a_example.in')
