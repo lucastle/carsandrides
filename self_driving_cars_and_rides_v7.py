@@ -37,9 +37,9 @@ class Car:
 
     def assign_ride(self, ride):
         self.assigned_rides.append(ride.index)
+        self.__free_by_step = self.__compute_free_by(ride)
         self.next_r = ride.end_r
         self.next_c = ride.end_c
-        self.__free_by_step = self.__compute_free_by(ride)
 
     def __compute_free_by(self, ride):
         current_to_start_distance = self.__distance_to(ride.start_r, ride.start_c)
