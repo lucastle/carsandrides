@@ -91,7 +91,6 @@ class TestScoreSubmission(unittest.TestCase):
         score = ScoreSubmissionComputer().compute(problem, submission)
         self.assertEquals(score, 21465945)         
 
-
 def main(argv):
     unittest.main()
 
